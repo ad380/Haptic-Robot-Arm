@@ -3,6 +3,8 @@
    by Dejan, https://howtomechatronics.com
 */
 #include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
 const int MPU = 0x68; // MPU6050 I2C address
 float AccX, AccY, AccZ;
 float GyroX, GyroY, GyroZ;
@@ -11,6 +13,10 @@ float roll, pitch, yaw;
 float AccErrorX, AccErrorY, GyroErrorX, GyroErrorY, GyroErrorZ;
 float elapsedTime, currentTime, previousTime;
 int c = 0;
+
+// Set the LCD address to 0x27 for a 16 chars and 2 line display
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
 void setup() {
   Serial.begin(19200);
   Wire.begin();                      // Initialize comunication
@@ -31,9 +37,18 @@ void setup() {
   Wire.endTransmission(true);
   delay(20);
   */
+
+  // initialize the LCD, 
+  lcd.init();
+  // Turn on the blacklight and print a message.
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("Haptic Robot Arm");
+  lcd.setCursor(0,1);
+  lcd.print("2022 Capstone");
   // Call this function if you need to get the IMU error values for your module
-  calculate_IMU_error();
-  delay(20);
+  //calculate_IMU_error();
+  delay(1000);
 }
 void loop() {
   // === Read acceleromter data === //
@@ -46,8 +61,8 @@ void loop() {
   AccY = (Wire.read() << 8 | Wire.read()) / 16384.0; // Y-axis value
   AccZ = (Wire.read() << 8 | Wire.read()) / 16384.0; // Z-axis value
   // Calculating Roll and Pitch from the accelerometer data
-  accAngleX = (atan(AccY / sqrt(pow(AccX, 2) + pow(AccZ, 2))) * 180 / PI) + 0.53; // AccErrorX ~(-0.53) See the calculate_IMU_error()custom function for more details
-  accAngleY = (atan(-1 * AccX / sqrt(pow(AccY, 2) + pow(AccZ, 2))) * 180 / PI) + 0.41; // AccErrorY ~(-0.41)
+  accAngleX = (atan(AccY / sqrt(pow(AccX, 2) + pow(AccZ, 2))) * 180 / PI) + 0.66; // AccErrorX ~(-0.66) See the calculate_IMU_error()custom function for more details
+  accAngleY = (atan(-1 * AccX / sqrt(pow(AccY, 2) + pow(AccZ, 2))) * 180 / PI) + 0.83; // AccErrorY ~(-0.83)
   // === Read gyroscope data === //
   previousTime = currentTime;        // Previous time is stored before the actual time read
   currentTime = millis();            // Current time actual time read
@@ -60,9 +75,9 @@ void loop() {
   GyroY = (Wire.read() << 8 | Wire.read()) / 131.0;
   GyroZ = (Wire.read() << 8 | Wire.read()) / 131.0;
   // Correct the outputs with the calculated error values
-  GyroX = GyroX + 0.80; // GyroErrorX ~(-0.80)
-  GyroY = GyroY - 0.91; // GyroErrorY ~(0.91)
-  GyroZ = GyroZ - 0.79; // GyroErrorZ ~ (1.07)
+  GyroX = GyroX + 0.70; // GyroErrorX ~(-0.70)
+  GyroY = GyroY - 0.86; // GyroErrorY ~(0.86)
+  GyroZ = GyroZ - 1.14; // GyroErrorZ ~ (1.14)
   // Currently the raw values are in degrees per seconds, deg/s, so we need to multiply by sendonds (s) to get the angle in degrees
   gyroAngleX = gyroAngleX + GyroX * elapsedTime; // deg/s * s = deg
   gyroAngleY = gyroAngleY + GyroY * elapsedTime;
@@ -72,11 +87,43 @@ void loop() {
   pitch = 0.96 * gyroAngleY + 0.04 * accAngleY;
   
   // Print the values on the serial monitor
+  /*
   Serial.print(roll);
   Serial.print("/");
   Serial.print(pitch);
   Serial.print("/");
   Serial.println(yaw);
+  */
+
+  Serial.print(AccX);
+  Serial.print(","); 
+  Serial.print(roll); 
+  Serial.print(","); 
+  Serial.print(AccY);
+  Serial.print(","); 
+  Serial.print(pitch); 
+  Serial.print(",");
+  Serial.print(AccZ); 
+  Serial.print(","); 
+  Serial.print(yaw);
+  Serial.println();
+  
+
+  //print values to lcd
+  lcd.clear();// clear previous values from screen
+  lcd.setCursor(0,0);
+  lcd.print("Roll:");
+  lcd.setCursor(5,0);
+  lcd.print((int)roll);
+  lcd.setCursor(8,0);
+  lcd.print("Pitch:");
+  lcd.setCursor(14,0);
+  lcd.print((int)pitch);
+  lcd.setCursor(5,1);
+  lcd.print("Yaw:");
+  lcd.setCursor(10,1);
+  lcd.print((int)yaw);                         
+  delay(100);
 }
 void calculate_IMU_error() {
   // We can call this funtion in the setup section to calculate the accelerometer and gyro data error. From here we will get the error values used in the above equations printed on the Serial Monitor.
